@@ -214,7 +214,7 @@
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
 <script>
-(function(){
+(async function(){
   let urlParams = new URLSearchParams(window.location.search);
   let contactId = urlParams.get("contactId");
   const isStaff = urlParams.has("staff");
@@ -227,84 +227,77 @@
   const appDownloadRow = document.getElementById("app-download-row");
   if (!container) return;
 
-  // ... your existing variables & functions ...
+  let loading = false;
+  let loadedOnce = false;
 
- async function renderChecklist(){
-  if (loading) return;
-  if(!contactId){
-    container.innerHTML = "<p style='color:red;'>No contactId in URL.</p>";
-    return;
-  }
-
-  if (!loadedOnce) {
-    container.innerHTML = `
-      <div id="onboarding-spinner">
-        <div class="spinner"></div>
-        <div>Fetching your details…</div>
-      </div>
-    `;
-  }
-
-  loading = true;
-  try {
-    const response = await fetch(`https://ghl-proxy.fly.dev/contact/${contactId}`);
-    if (!response.ok) {
-      throw new Error(`Fetch error: ${response.status}`);
-    }
-    const data = await response.json();
-    loadedOnce = true;
-
-    // --- Here you build the HTML checklist from data ---
-    // Example: render your details section (replace with your own rendering logic)
-    const contact = data.contact || {};
-    const fieldsArr = Array.isArray(contact.customField) ? contact.customField : [];
-    
-    let html = "";
-    try {
-      html += renderYourDetailsSection(contact, fieldsArr);
-      // Add your full checklist render logic here, like in your original script
-    } catch(e) {
-      html += `<div style="color:red;">Error rendering details: ${e.message || e}</div>`;
+  async function renderChecklist(){
+    if (loading) return;
+    if(!contactId){
+      container.innerHTML = "<p style='color:red;'>No contactId in URL.</p>";
+      return;
     }
 
-    container.innerHTML = html;
-
-  } catch (error) {
-    container.innerHTML = `<p style='color:red;'>Error loading data:<br>${error.message}</p>`;
-  }
-  loading = false;
-}
-
-    // Show Bombers App links always
-    if (appDownloadRow) appDownloadRow.style.display = 'block';
-
-    let html = "";
-
-    // Your existing rendering code for member view
-    html += renderYourDetailsSection(contact, fieldsArr);
-
-    if (isStaff) {
-      // Additional staff info display example:
-      html += `
-        <h2>Staff View</h2>
-        <div class="details-table">
-          <div class="details-header">Staff Details</div>
-          <table style="border-collapse:collapse;width:100%;background:none;">
-            <tr><th class="details-label">Phone:</th><td>${getF(FIELDS.PHONE)}</td></tr>
-            <tr><th class="details-label">Tags:</th><td>${tags.join(", ")}</td></tr>
-            <tr><th class="details-label">Appointment Date:</th><td>${getF(FIELDS.APPT_DATE)}</td></tr>
-            <tr><th class="details-label">Appointment Time:</th><td>${getF(FIELDS.APPT_TIME)}</td></tr>
-            <tr><th class="details-label">Assigned Coach:</th><td>${getF(FIELDS.APPT_COACH)}</td></tr>
-          </table>
+    if (!loadedOnce) {
+      container.innerHTML = `
+        <div id="onboarding-spinner">
+          <div class="spinner"></div>
+          <div>Fetching your details…</div>
         </div>
       `;
     }
 
-    // ... rest of your checklist rendering ...
+    loading = true;
+    try {
+      const response = await fetch(`https://ghl-proxy.fly.dev/contact/${contactId}`);
+      if (!response.ok) {
+        throw new Error(`Fetch error: ${response.status}`);
+      }
+      const data = await response.json();
+      loadedOnce = true;
 
-    container.innerHTML = html;
+      const contact = data.contact || {};
+      const tags = contact.tags || [];
+      const fieldsArr = Array.isArray(contact.customField) ? contact.customField : [];
+      const getF = id => {
+        const f = fieldsArr.find(f => f.id === id);
+        return f ? f.value : "";
+      };
+
+      // Show Bombers App links always
+      if (appDownloadRow) appDownloadRow.style.display = 'block';
+
+      let html = "";
+      try {
+        html += renderYourDetailsSection(contact, fieldsArr);
+      } catch(e) {
+        html += `<div style="color:red;">Error rendering details: ${e.message || e}</div>`;
+      }
+
+      if (isStaff) {
+        html += `
+          <h2>Staff View</h2>
+          <div class="details-table">
+            <div class="details-header">Staff Details</div>
+            <table style="border-collapse:collapse;width:100%;background:none;">
+              <tr><th class="details-label">Phone:</th><td>${getF(FIELDS.PHONE)}</td></tr>
+              <tr><th class="details-label">Tags:</th><td>${tags.join(", ")}</td></tr>
+              <tr><th class="details-label">Appointment Date:</th><td>${getF(FIELDS.APPT_DATE)}</td></tr>
+              <tr><th class="details-label">Appointment Time:</th><td>${getF(FIELDS.APPT_TIME)}</td></tr>
+              <tr><th class="details-label">Assigned Coach:</th><td>${getF(FIELDS.APPT_COACH)}</td></tr>
+            </table>
+          </div>
+        `;
+      }
+
+      container.innerHTML = html;
+
+    } catch (error) {
+      container.innerHTML = `<p style='color:red;'>Error loading data:<br>${error.message}</p>`;
+    }
+    loading = false;
   }
 
   renderChecklist();
   setInterval(renderChecklist, 3000);
+
 })();
