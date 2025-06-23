@@ -1,3 +1,217 @@
+<!-- 0. Base & Responsive Styles -->
+<style>
+  body {
+    font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    background: #fff;
+    margin: 0;
+    padding: 0;
+  }
+  #onboarding-outer {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem 3rem 1rem;
+  }
+  #onboarding-checklist h2 {
+    font-size: 1.65rem;
+    font-weight: 700;
+    margin: 1.8rem 0 1.1rem 0;
+    letter-spacing: -0.01em;
+    color: #19213a;
+  }
+  #onboarding-checklist h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    margin: 1.2rem 0 0.7rem 0;
+    color: #32406e;
+    letter-spacing: 0.01em;
+  }
+  #onboarding-checklist .details-table {
+    max-width: 640px;
+    margin: 0 auto 2rem auto;
+    padding: 1.25rem 1.5rem 1.25rem 1.5rem;
+    border: 1px solid #dee4ec;
+    border-radius: 12px;
+    background: #f8fafc;
+    box-sizing: border-box;
+    font-size: 1.09rem;
+    box-shadow: 0 2px 8px 0 #1a21351a;
+  }
+  #onboarding-checklist .details-header {
+    font-size: 1.14rem;
+    font-weight: 600;
+    margin-bottom: 0.8em;
+    color: #32406e;
+    letter-spacing: 0.01em;
+  }
+  #onboarding-checklist .details-label {
+    min-width: 105px;
+    display: inline-block;
+    font-weight: 500;
+    padding-right: 1em;
+    vertical-align: top;
+    color: #2e3d5d;
+  }
+  #onboarding-checklist .details-ok {
+    color: #243153;
+    word-break: break-word;
+    max-width: 240px;
+  }
+  #onboarding-checklist .details-missing {
+    color: #c62828;
+    font-weight: 600;
+    word-break: break-word;
+    max-width: 240px;
+  }
+  #onboarding-checklist .details-missing span[title] {
+    margin-left: .2em;
+    font-size: 1em;
+    vertical-align: middle;
+  }
+  #onboarding-checklist .details-table td {
+    padding-bottom: 0.3em;
+  }
+  #onboarding-checklist .details-table th {
+    text-align: left;
+    font-weight: 500;
+    padding-bottom: 0.3em;
+  }
+  #onboarding-checklist ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  #onboarding-checklist li {
+    margin: 1rem 0;
+    font-size: 1.09rem;
+  }
+  #onboarding-checklist .btn {
+    display: inline-block;
+    padding: 0.5em 1.2em;
+    margin-left: 0.5em;
+    background: #2154fc;
+    color: #fff;
+    font-size: 0.93rem;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: transform .1s, box-shadow .1s, background .2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+  }
+  #onboarding-checklist .btn:hover {
+    background: #173aa7;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(33,84,252,0.13);
+  }
+  /* Checklist box styling */
+  #onboarding-checklist .checklist-block {
+    max-width: 640px;
+    margin: 0 auto 2.2rem auto;
+    padding: 1.5rem 1.2rem 1.2rem 1.2rem;
+    border: 1.2px solid #dee4ec;
+    border-radius: 13px;
+    background: #f7faff;
+    box-shadow: 0 2px 8px #32406e10;
+  }
+  #onboarding-checklist .checklist-block li {
+    margin: 1.1rem 0;
+    font-size: 1.09rem;
+  }
+  /* Responsive tweaks */
+  @media (max-width: 600px) {
+    #onboarding-outer {
+      padding: 0.5rem 0.2rem 2rem 0.2rem;
+    }
+    #onboarding-checklist h2 {
+      font-size: 1.19rem;
+      margin-bottom: 1.25rem;
+    }
+    #onboarding-checklist .details-table {
+      padding: 0.8rem 0.5rem;
+      font-size: 1rem;
+    }
+    #onboarding-checklist .details-label {
+      min-width: 92px;
+      padding-right: 0.6em;
+      font-size: 1rem;
+    }
+    #onboarding-checklist .details-ok,
+    #onboarding-checklist .details-missing {
+      max-width: 99vw;
+      display: block;
+      overflow-wrap: break-word;
+      word-break: break-word;
+    }
+    #onboarding-checklist table {
+      width: 100%;
+      table-layout: fixed;
+    }
+    #onboarding-checklist td, #onboarding-checklist th {
+      font-size: 1rem;
+      vertical-align: top;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
+    #onboarding-checklist .btn {
+      width: 100%;
+      margin: 0.5em 0 0 0;
+      font-size: 1rem;
+    }
+  }
+  /* Spinner */
+  #onboarding-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 180px;
+    font-size: 1.15rem;
+    color: #222;
+  }
+  .spinner {
+    border: 4px solid #eee;
+    border-top: 4px solid #2154fc;
+    border-radius: 50%;
+    width: 38px;
+    height: 38px;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1.15em;
+  }
+  /* Bombers app download row */
+  #app-download-row {
+    max-width: 640px;
+    margin: 2.5rem auto 1.5rem auto;
+    padding: 1.2rem 1.2rem 1.2rem 1.2rem;
+    border: 1.2px solid #dee4ec;
+    border-radius: 13px;
+    background: #f7faff;
+    box-shadow: 0 2px 8px #32406e10;
+    text-align: center;
+  }
+  #app-download-row .btn {
+    margin: 0.2em 0.5em 0.2em 0.5em;
+    font-size: 1.07rem;
+  }
+</style>
+
+<div id="onboarding-outer">
+  <div id="onboarding-checklist">
+    <div id="onboarding-spinner">
+      <div class="spinner"></div>
+      <div>Fetching your details…</div>
+    </div>
+  </div>
+  <!-- Bombers App Download Row -->
+  <div id="app-download-row" style="display:none">
+    <div style="font-weight:600;margin-bottom:0.6em;">Download the Bombers App</div>
+    <a class="btn" href="https://apps.apple.com/gb/app/bombers-physical-training/id1589832573" target="_blank">iOS</a>
+    <a class="btn" href="https://play.google.com/store/apps/details?id=com.pushpress.bombersphysicaltraining&gl=GB" target="_blank">Android</a>
+  </div>
+</div>
+
+<!-- Confetti for ticks -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 async function renderChecklist() {
   if (loading) return;
   if (!contactId) {
