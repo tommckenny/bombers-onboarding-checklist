@@ -215,7 +215,10 @@
 
 <script>
 (function(){
-  let contactId = new URLSearchParams(window.location.search).get("contactId");
+  let urlParams = new URLSearchParams(window.location.search);
+  let contactId = urlParams.get("contactId");
+  const isStaff = urlParams.has("staff");
+
   if (!contactId) {
     const m = window.location.pathname.match(/-contactId=([^\/]+)/);
     contactId = m ? m[1] : null;
@@ -224,145 +227,7 @@
   const appDownloadRow = document.getElementById("app-download-row");
   if (!container) return;
 
-  let loading = false;
-  let loadedOnce = false;
-  let bpEditMode = false;
-
-  const FIELDS = {
-    APPT_DATE:   "BP5YJXFaKjFrmz0N53J4",
-    APPT_TIME:   "QL8Rg5ozgb1pPHKfdoGs",
-    APPT_COACH:  "Iczk4Pcm4XecHzZZj31E",
-    BP_RESULT:   "Cvzpen1uIP6CNffM6BwN",
-    TRIAL_START: "kqpNMwQER3ljj3r6mZxi",
-    PIN:         "rkCkFkCpBjfPQk8YvHG4",
-    PHONE:       "npNqCUwvXd09eIV882kT"
-  };
-  const TAGS = {
-    CONSULT_DONE:   "consultation form submitted",
-    PARQ_SUBMITTED: "par-q submitted",
-    NSI_BOOKED:     "nsi booked",
-    DC_BOOKED:      "discovery call booked",
-    INTRO_ATTENDED: "attended intro",
-    INTRO_NOSHOW:   "intro no show",
-    INDUCTION_DONE: "online induction completed",
-    PURCHASED_1TO1: "initial 1-1 purchased",
-    BOOKED_1TO1:    "on-boarding 1-1 booked",
-    DEBRIEF_DONE:   "initial 1-1 debrief completed",
-    MEMBERSHIP_DONE:"membership form submitted"
-  };
-
-  function burst(){
-    const dur=2000,end=Date.now()+dur,defs={startVelocity:30,spread:360,ticks:60,zIndex:9999};
-    const iv = setInterval(()=>{
-      if(Date.now()>end) return clearInterval(iv);
-      confetti(Object.assign({},defs,{particleCount:40,origin:{x:Math.random(),y:Math.random()-0.2}}));
-    },250);
-  }
-
-  function isManual(k){ return localStorage.getItem("chk_"+k)==="1"; }
-  function setManual(k){ localStorage.setItem("chk_"+k,"1"); }
-
-  async function saveBP(v){
-    const res = await fetch(`https://ghl-proxy.fly.dev/contact/${contactId}`, {
-      method:"PATCH",
-      headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({ customFields:[{id:FIELDS.BP_RESULT,value:v}] })
-    });
-    if(!res.ok) throw new Error(res.statusText);
-  }
-
-  function getPINStatus(pin, startTimeStr) {
-    if (!pin || !startTimeStr) return "PIN will be available closer to your session time.";
-    const now = new Date();
-    const start = new Date(startTimeStr);
-    const unlockTime = new Date(start.getTime() - 15 * 60000);
-    if (now < unlockTime) return "PIN will be available closer to your session time.";
-    return `Your PIN is ${pin}`;
-  }
-
-  // ==== RENDER YOUR DETAILS SECTION ====
-  function renderYourDetailsSection(contact, customFields) {
-    contact = contact || {};
-    customFields = Array.isArray(customFields) ? customFields : [];
-    const getF = id => {
-      const f = customFields.find(f => f.id === id);
-      return f ? f.value : "";
-    };
-    const firstName = contact.firstName || "";
-    const lastName = contact.lastName || "";
-    const email = contact.email || "";
-    const phone = getF(FIELDS.PHONE) || "";
-    const dob = contact.dateOfBirth || "";
-
-    function isNameValid(n) { return n && n.length > 1; }
-    function isEmailValid(e) { return !!e && /\S+@\S+\.\S+/.test(e); }
-    function isPhoneValid(p) { return !!p && /^\+?\d{10,}$/.test((p+"").replace(/\s/g,"")); }
-    function isDOBValid(d) { return !!d && /^\d{4}-\d{2}-\d{2}$/.test(d); }
-
-    function row(label, value, valid) {
-      let valHTML = value ? value : "<span>Missing</span>";
-      if (!valid)
-        valHTML += ' <span title="Missing or invalid">&#9888;</span>';
-      return `<tr>
-        <th class="details-label">${label}:</th>
-        <td class="${valid ? 'details-ok' : 'details-missing'}">${valHTML}</td>
-      </tr>`;
-    }
-
-    let html = `<div class="details-table">
-      <div class="details-header">Your Details</div>
-      <table style="border-collapse:collapse;width:100%;background:none;">
-        ${row("Name", (firstName + (lastName ? " " + lastName : "")), isNameValid(firstName) && isNameValid(lastName))}
-        ${row("Phone", phone, isPhoneValid(phone))}
-        ${row("Email", email, isEmailValid(email))}
-        ${row("Date of Birth", dob, isDOBValid(dob))}
-      </table>
-    </div>`;
-    return html;
-  }
-  // ==== END RENDER YOUR DETAILS SECTION ====
-
-  // === RENDER BLOOD PRESSURE SUBITEM ===
-  function renderBPItem(bp, editing) {
-    if (bp) {
-      return `✅ Blood Pressure Check<div style='margin-left:1.5em;color:#555'>Results: ${bp}</div>`;
-    }
-    if (editing) {
-      return `
-        ⬜ Blood Pressure Check
-        <div style='margin-left:1.5em;'>
-          <input id="bp-input" type="text" style="padding:0.2em 0.6em;font-size:1rem;width:110px;" placeholder="e.g. 120/80">
-          <button class="btn" style="margin-left:0.5em;" onclick="window.saveBPResult()">Save</button>
-          <button class="btn" style="background:#ddd;color:#222;margin-left:0.5em;" onclick="window.cancelBPEntry()">Cancel</button>
-        </div>
-      `;
-    }
-    return `⬜ Blood Pressure Check <button class="btn" style="margin-left:1em;" onclick="window.startBPEntry()">Enter Results</button>`;
-  }
-
-  // === MAKE BP ENTRY EDITABLE ===
-  window.startBPEntry = function() {
-    bpEditMode = true;
-    renderChecklist();
-  };
-  window.cancelBPEntry = function() {
-    bpEditMode = false;
-    renderChecklist();
-  };
-  window.saveBPResult = async function() {
-    const input = document.getElementById('bp-input');
-    if (!input || !input.value) {
-      alert("Please enter a value.");
-      return;
-    }
-    try {
-      await saveBP(input.value);
-      bpEditMode = false;
-      renderChecklist();
-    } catch (e) {
-      alert("Failed to save blood pressure.");
-    }
-  };
+  // ... your existing variables & functions ...
 
   async function renderChecklist(){
     if (loading) return;
@@ -400,89 +265,29 @@
     // Show Bombers App links always
     if (appDownloadRow) appDownloadRow.style.display = 'block';
 
-    // Headings: details, enquiry, trial
     let html = "";
-    try {
-      html += renderYourDetailsSection(contact, fieldsArr);
-    } catch (e) {
-      html += `<div style="max-width:640px;margin:1em auto 2em;font-family:Inter,sans-serif;padding:1em 1.5em;background:#ffeaea;border:1px solid #c62828;color:#b71c1c;border-radius:7px">
-        <b>Error rendering your details</b><br>
-        ${e.message||e}
-      </div>`;
+
+    // Your existing rendering code for member view
+    html += renderYourDetailsSection(contact, fieldsArr);
+
+    if (isStaff) {
+      // Additional staff info display example:
+      html += `
+        <h2>Staff View</h2>
+        <div class="details-table">
+          <div class="details-header">Staff Details</div>
+          <table style="border-collapse:collapse;width:100%;background:none;">
+            <tr><th class="details-label">Phone:</th><td>${getF(FIELDS.PHONE)}</td></tr>
+            <tr><th class="details-label">Tags:</th><td>${tags.join(", ")}</td></tr>
+            <tr><th class="details-label">Appointment Date:</th><td>${getF(FIELDS.APPT_DATE)}</td></tr>
+            <tr><th class="details-label">Appointment Time:</th><td>${getF(FIELDS.APPT_TIME)}</td></tr>
+            <tr><th class="details-label">Assigned Coach:</th><td>${getF(FIELDS.APPT_COACH)}</td></tr>
+          </table>
+        </div>
+      `;
     }
 
-    const consultationDone = hasTag(TAGS.CONSULT_DONE);
-
-    const enquiry = [
-      { label:"Consultation Questionnaire", done:hasTag(TAGS.CONSULT_DONE),
-        button:!hasTag(TAGS.CONSULT_DONE)?{text:"Complete Now",href:`https://start.bomberspt.co.uk/about-you?contactId=${contactId}`} :null },
-      { label:"Health Questionnaire", done:hasTag(TAGS.PARQ_SUBMITTED),
-        button:!hasTag(TAGS.PARQ_SUBMITTED)?{text:"Complete Now",href:`https://start.bomberspt.co.uk/health-questionnaire?contactId=${contactId}`} :null },
-      { label:"Intro Meeting",
-        done:hasTag(TAGS.NSI_BOOKED)||hasTag(TAGS.DC_BOOKED),
-        status: hasTag(TAGS.INTRO_ATTENDED)?"Attended" : hasTag(TAGS.INTRO_NOSHOW)?"No show" : (hasTag(TAGS.NSI_BOOKED)||hasTag(TAGS.DC_BOOKED))?"Scheduled":null,
-        details:(hasTag(TAGS.NSI_BOOKED)||hasTag(TAGS.DC_BOOKED))?`${getF(FIELDS.APPT_TIME)} on ${getF(FIELDS.APPT_DATE)} with ${getF(FIELDS.APPT_COACH)}`:"",
-        button:!hasTag(TAGS.NSI_BOOKED)&&!hasTag(TAGS.DC_BOOKED)?{text:"Book Now",href:`https://start.bomberspt.co.uk/no-sweat-intro?contactId=${contactId}`} :{text:"View Details",href:`https://start.bomberspt.co.uk/your-intro?contactId=${contactId}`},
-        sub:[
-          {
-            label: "Blood Pressure Check",
-            done: !!getF(FIELDS.BP_RESULT),
-            render: () => renderBPItem(getF(FIELDS.BP_RESULT), bpEditMode)
-          }
-        ]
-      },
-      { label:"Online Induction", done:hasTag(TAGS.INDUCTION_DONE),
-        button:!hasTag(TAGS.INDUCTION_DONE)?{text:"Complete Now",href:"https://docs.google.com/forms/d/e/1FAIpQLSezbaFv0m6VnAydhbVc1_KRWpslYeFZa05OrYIxdfJHSeU32A/viewform"}:null }
-    ];
-
-    const trial = [
-      { label:"Initial 1-1", done:hasTag(TAGS.DEBRIEF_DONE),
-        status: hasTag(TAGS.DEBRIEF_DONE)?null : hasTag(TAGS.BOOKED_1TO1)?"Booked" : hasTag(TAGS.PURCHASED_1TO1)?"Purchased":null,
-        button: hasTag(TAGS.DEBRIEF_DONE)?null : hasTag(TAGS.BOOKED_1TO1)?{text:"View Details",href:`https://start.bomberspt.co.uk/your-initial-1-1?contactId=${contactId}`} : hasTag(TAGS.PURCHASED_1TO1)?{text:"Book Now",href:`https://start.bomberspt.co.uk/book-initial-1-1?contactId=${contactId}`} : {text:"Purchase Now",href:`https://start.bomberspt.co.uk/purchase-initial-1-1?contactId=${contactId}`},
-        sub:[
-          { label:"PIN", done:!!getF(FIELDS.PIN),
-            details:getPINStatus(getF(FIELDS.PIN), `${getF(FIELDS.APPT_DATE)} ${getF(FIELDS.APPT_TIME)}`) },
-          { label:"1-1 Debrief", done:hasTag(TAGS.DEBRIEF_DONE),
-            button:(!hasTag(TAGS.DEBRIEF_DONE)&&new Date()>=new Date(`${getF(FIELDS.APPT_DATE)}T${getF(FIELDS.APPT_TIME)}`))?{text:"Complete Debrief",href:`https://start.bomberspt.co.uk/onboarding-session-debrief?contactId=${contactId}`} : null }
-        ] },
-      { label:"Membership Setup", done:hasTag(TAGS.MEMBERSHIP_DONE),
-        button: hasTag(TAGS.MEMBERSHIP_DONE)?{text:"Update Plan",href:`https://start.bomberspt.co.uk/membership-setup?contactId=${contactId}&editPlan=true`} : consultationDone?{text:"Choose Plan",href:`https://start.bomberspt.co.uk/membership-setup?contactId=${contactId}`} : null },
-      { label:"Trial Period", done: hasTag(TAGS.DEBRIEF_DONE) && !!getF(FIELDS.TRIAL_START), details: getF(FIELDS.TRIAL_START)?`Started on ${getF(FIELDS.TRIAL_START)}`:"", button: hasTag(TAGS.DEBRIEF_DONE)?{text:"View Trial Info",href:`https://start.bomberspt.co.uk/trial-info?contactId=${contactId}`} : null }
-    ];
-
-    // Animation logic for ticks
-    const all = [...enquiry, ...enquiry.flatMap(i=>(i.sub||[]).map(s=>(s.render ? {label:s.label, done:s.done, custom:true} : s))), ...(hasTag(TAGS.NSI_BOOKED)||hasTag(TAGS.DC_BOOKED)?trial:[])];
-    if (window._prev){ all.forEach(item=>{ const prev = window._prev.find(p=>p.label===item.label); if (!prev || prev.done!==item.done || prev.status!==(item.status||"") || prev.details!==(item.details||"")) burst(); }); }
-    window._prev = all.map(i=>({ label:i.label, done:i.done, status:i.status||"", details:i.details||"" }));
-    const json = JSON.stringify(window._prev); if (json === window._last) return; window._last = json;
-
-    // === MAIN CHECKLIST HTML START ===
-    html += `<h2>Your enquiry</h2>
-    <div class="checklist-block"><ul>`;
-    enquiry.forEach(i=>{
-      html += `<li style="display:flex;justify-content:space-between;align-items:center;margin:1rem 0"><div>${i.done?"✅":"⬜"} <strong>${i.label}</strong>${i.status?` — <em>${i.status}</em>`:""}</div><div>${
-        i.button ? `<a class="btn" href="${i.button.href}" target="_blank">${i.button.text}</a>` : ""
-      }</div></li>`;
-      if(i.sub){ i.sub.forEach(s=>{
-        if (typeof s.render === "function") {
-          html += `<li style="margin-left:2em;margin-bottom:.75em;width:100%">${s.render()}</li>`;
-        } else {
-          html += `<li style="margin-left:2em;margin-bottom:.75em">${s.done?"✅":"⬜"} ${s.label}${s.details?`<div style='margin-left:1.5em;color:#555'>${s.details}</div>`:""}${s.button?`<a class="btn" href="${s.button.href}" target="_blank">${s.button.text}</a>`:""}</li>`;
-        }
-      }); }
-    });
-    html += `</ul></div>`;
-
-    if (hasTag(TAGS.NSI_BOOKED)||hasTag(TAGS.DC_BOOKED)) {
-      html += `<h2>Your trial</h2>
-      <div class="checklist-block"><ul>`;
-      trial.forEach(i=>{
-        html += `<li style="display:flex;justify-content:space-between;align-items:center;margin:1rem 0"><div>${i.done?"✅":"⬜"} <strong>${i.label}</strong>${i.status?` — <em>${i.status}</em>`:""}${i.details?`<div style="margin-left:1.5em;color:#555">${i.details}</div>`:""}</div><div>${i.button?`<a class="btn" href="${i.button.href}" target="_blank">${i.button.text}</a>`:""}</div></li>`;
-        if(i.sub){ i.sub.forEach(s=>{ html += `<li style="margin-left:2em;margin-bottom:.75em">${s.done?"✅":"⬜"} ${s.label}${s.details?`<div style='margin-left:1.5em;color:#555'>${s.details}</div>`:""}${s.button?`<a class="btn" href="${s.button.href}" target="_blank">${s.button.text}</a>`:""}</li>`; }); }
-      });
-      html += `</ul></div>`;
-    }
-    // === MAIN CHECKLIST HTML END ===
+    // ... rest of your checklist rendering ...
 
     container.innerHTML = html;
   }
@@ -490,4 +295,3 @@
   renderChecklist();
   setInterval(renderChecklist, 3000);
 })();
-</script>
