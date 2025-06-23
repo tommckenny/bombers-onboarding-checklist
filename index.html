@@ -380,12 +380,13 @@ async function renderChecklist(){
   }
   loading = false;
 
-  const contact = (data && data.contact) ? data.contact : {};
-  const tags = contact.tags || [];
-  const fieldsArr = Array.isArray(contact.customField) ? contact.customField : [];
-  const fields = Object.fromEntries(fieldsArr.map(f=>[f.id,f.value||""]));
-  const hasTag = t=>tags.includes(t), getF=id=>fields[id]||"";
-
+const contact = (data && data.contact) ? data.contact : {};
+const tags = contact.tags || [];
+const fieldsArr = Array.isArray(contact.customField) ? contact.customField : [];
+const fields = Object.fromEntries(fieldsArr.map(f => [f.id, f.value || ""]));
+const hasTag = t => tags.includes(t);
+const getF = id => fields[id] || "";
+  
   // Show Bombers App links always
   if (appDownloadRow) appDownloadRow.style.display = 'block';
 
@@ -486,6 +487,17 @@ async function renderChecklist(){
     html += `</ul></div>`;
   }
 <script>
+    const urlParams = new URLSearchParams(window.location.search);
+let contactId = urlParams.get("contactId");
+const isStaff = urlParams.has("staff");
+
+if (!contactId) {
+  const m = window.location.pathname.match(/-contactId=([^\/]+)/);
+  contactId = m ? m[1] : null;
+}
+
+console.log("Contact ID:", contactId);
+console.log("Staff mode:", isStaff);
 window.onload = function() {
   console.log("Script started - DOM ready");
 
