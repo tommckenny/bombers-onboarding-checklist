@@ -1,33 +1,70 @@
-<div id="onboarding-checklist">
-  <div id="onboarding-spinner">
-    <div class="spinner"></div>
-    <div>Fetching your details…</div>
-  </div>
-</div>
-
-<script>
-(async function(){
-  const urlParams = new URLSearchParams(window.location.search);
-  const contactId = urlParams.get("contactId");
-  const container = document.getElementById("onboarding-checklist");
-
+async function renderChecklist() {
+  if (loading) return;
   if (!contactId) {
     container.innerHTML = "<p style='color:red;'>No contactId in URL.</p>";
     return;
   }
-  container.innerHTML = `
-    <div class="spinner"></div>
-    <div>Fetching your details…</div>
-  `;
+
+  if (!loadedOnce) {
+    container.innerHTML = `
+      <div id="onboarding-spinner">
+        <div class="spinner"></div>
+        <div>Fetching your details…</div>
+      </div>
+    `;
+  }
+
+  loading = true;
 
   try {
-    const resp = await fetch(`https://ghl-proxy.fly.dev/contact/${contactId}`);
-    if (!resp.ok) throw new Error("Failed to fetch");
-    const data = await resp.json();
+    const response = await fetch(`https://ghl-proxy.fly.dev/contact/${contactId}`);
+    if (!response.ok) {
+      throw new Error(`Fetch error: ${response.status}`);
+    }
+    const data = await response.json();
+    loadedOnce = true;
+
     const contact = data.contact || {};
-    container.innerHTML = `<h2>Hello, ${contact.firstName || "User"}!</h2>`;
-  } catch (e) {
-    container.innerHTML = `<p style="color:red;">Error loading: ${e.message}</p>`;
+    const tags = contact.tags || [];
+    const fieldsArr = Array.isArray(contact.customField) ? contact.customField : [];
+    const getF = id => {
+      const f = fieldsArr.find(f => f.id === id);
+      return f ? f.value : "";
+    };
+
+    if (appDownloadRow) appDownloadRow.style.display = 'block';
+
+    let html = "";
+
+    // Render your details
+    try {
+      html += renderYourDetailsSection(contact, fieldsArr);
+    } catch (e) {
+      html += `<p style="color:red;">Error rendering details: ${e.message}</p>`;
+    }
+
+    // Render staff view if flagged
+    if (isStaff) {
+      html += `
+        <h2>Staff View</h2>
+        <div class="details-table">
+          <div class="details-header">Staff Details</div>
+          <table style="border-collapse:collapse;width:100%;background:none;">
+            <tr><th class="details-label">Phone:</th><td>${getF(FIELDS.PHONE)}</td></tr>
+            <tr><th class="details-label">Tags:</th><td>${tags.join(", ")}</td></tr>
+            <tr><th class="details-label">Appointment Date:</th><td>${getF(FIELDS.APPT_DATE)}</td></tr>
+            <tr><th class="details-label">Appointment Time:</th><td>${getF(FIELDS.APPT_TIME)}</td></tr>
+            <tr><th class="details-label">Assigned Coach:</th><td>${getF(FIELDS.APPT_COACH)}</td></tr>
+          </table>
+        </div>
+      `;
+    }
+
+    container.innerHTML = html;
+
+  } catch (error) {
+    container.innerHTML = `<p style='color:red;'>Error loading data:<br>${error.message}</p>`;
   }
-})();
-</script>
+
+  loading = false;
+}
